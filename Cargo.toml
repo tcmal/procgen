@@ -1,0 +1,6 @@
+[package]
+name = "procgen"
+version = "0.1.0"
+authors = ["Oscar <oscar.shrimpton.personal@gmail.com>"]
+
+[dependencies]
