@@ -1,14 +1,21 @@
+use super::TileSystem;
+
 #[test]
 fn adjacent_vertical() {
-    let system = TileSystem::new();
-
-    let ground_tile = system.add_tile("ground");
-
-    let floor_tile = system.add_tile("floor").above("ground");
-
-    let roof_tile = system.add_tile("roof").above("floor");
-
-    floor_tile.below("roof");
+    let mut system = TileSystem::new();
+    {
+        system.add_tile("ground").unwrap();
+    }
+    {
+        system
+            .add_tile("floor")
+            .unwrap()
+            .above("ground")
+            .below("roof");
+    }
+    {
+        system.add_tile("roof").unwrap().above("floor");
+    }
 
     // must be: roof    /\
     //          ground  ||
@@ -18,23 +25,23 @@ fn adjacent_vertical() {
     let map = system.gen_retry(1, 3, 10).unwrap();
 
     // returns Vec<Vec<&TileType>> where the outer is Y
-
-    assert_eq!(map, vec![[ground_tile], [floor_tile], [roof_tile]]);
+    assert_eq!(map[0][0].name, "floor");
+    assert_eq!(map[1][0].name, "ground");
+    assert_eq!(map[2][0].name, "roof");
 }
 
 #[test]
 fn not_adjacent_vertical() {
-    let system = TileSystem::new();
-
-    let red_tile = system.add_tile("red");
-
-    let green_tile = system.add_tile("green");
-
-    let blue_tile = system.add_tile("blue");
-
-    red_tile.not_below("blue");
-    blue_tile.not_above("red");
-    green_tile.not_below("red");
+    let mut system = TileSystem::new();
+    {
+        system.add_tile("red").unwrap().not_below("blue");
+    }
+    {
+        system.add_tile("green").unwrap().not_below("red");
+    }
+    {
+        system.add_tile("blue").unwrap().not_above("red");
+    }
 
     // must be: blue
     //          green
@@ -45,19 +52,27 @@ fn not_adjacent_vertical() {
 
     // returns Vec<Vec<&TileType>> where the outer is Y
 
-    assert_eq!(map, vec![[red_tile], [green_tile], [blue_tile]]);
+    assert_eq!(map[0][0].name, "red");
+    assert_eq!(map[1][0].name, "green");
+    assert_eq!(map[2][0].name, "blue");
 }
+
+#[test]
 fn adjacent_horizontal() {
-    let system = TileSystem::new();
-
-    let left_tile = system.add_tile("left");
-
-    let middle_tile = system.add_tile("middle").right("left");
-
-    let right_tile = system.add_tile("right").right("middle");
-
-    left_tile.left("middle");
-    middle_tile.left("right");
+    let mut system = TileSystem::new();
+    {
+        system.add_tile("left").unwrap().left("middle");
+    }
+    {
+        system
+            .add_tile("middle")
+            .unwrap()
+            .right("left")
+            .left("right");
+    }
+    {
+        system.add_tile("right").unwrap().right("middle");
+    }
 
     // must be: left middle right
 
@@ -66,24 +81,31 @@ fn adjacent_horizontal() {
 
     // returns Vec<Vec<&TileType>> where the outer is Y
 
-    assert_eq!(map, vec![[left_tile, middle_tile, right_tile]]);
+    assert_eq!(map[0][0].name, "left");
+    assert_eq!(map[0][1].name, "middle");
+    assert_eq!(map[0][2].name, "right");
 }
 
 #[test]
 fn not_adjacent_horizontal() {
-    let system = TileSystem::new();
-
-    let red_tile = system.add_tile("red");
-
-    let green_tile = system.add_tile("green");
-
-    let blue_tile = system.add_tile("blue");
-
-    red_tile.not_right("green");
-    red_tile.not_right("blue");
-    blue_tile.not_left("red");
-    blue_tile.not_left("green");
-    green_tile.not_right("blue");
+    let mut system = TileSystem::new();
+    {
+        system
+            .add_tile("red")
+            .unwrap()
+            .not_right("green")
+            .not_right("blue");
+    }
+    {
+        system.add_tile("green").unwrap().not_right("blue");
+    }
+    {
+        system
+            .add_tile("blue")
+            .unwrap()
+            .not_left("red")
+            .not_left("green");
+    }
 
     // must be: red green blue
 
@@ -92,5 +114,7 @@ fn not_adjacent_horizontal() {
 
     // returns Vec<Vec<&TileType>> where the outer is Y
 
-    assert_eq!(map, vec![[red_tile, green_tile, blue_tile]]);
+    assert_eq!(map[0][0].name, "red");
+    assert_eq!(map[0][1].name, "green");
+    assert_eq!(map[0][2].name, "blue");
 }
