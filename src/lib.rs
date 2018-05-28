@@ -16,6 +16,9 @@ fn put_tile<'a>(map: &mut Map<'a>, tile: &'a TileType, coord: CoOrd) {
     }
     map.get_mut(&coord.y).unwrap().insert(coord.x, tile);
 }
+fn remove_tile(map: &mut Map, coord: CoOrd) {
+    map.get_mut(&coord.y).unwrap().remove(&coord.x);
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CoOrd {
@@ -208,6 +211,8 @@ impl TileSystem {
             }
         }
         // if none pass, we couldn't find a valid option.
+        // remove whatever tile we placed, leaving the map untouched.
+        remove_tile(map, start);
         false
     }
 }
