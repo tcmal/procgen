@@ -3,6 +3,27 @@ use std::collections::HashMap;
 
 type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
 
+fn trans_is_in_bounds(mut pos: CoOrd, dir: RelativeDirection, w: u32, h: u32) -> bool{
+    use self::RelativeDirection::*;
+    match dir {
+        UP => pos.y += 1,
+        RIGHT => pos.x += 1,
+        DOWN => {
+            if pos.y < 1 {
+                return false;
+            }
+            pos.y -= 1
+        },
+        LEFT => {
+            if pos.x < 1 {
+                return false;
+            }
+            pos.x -= 1
+        },
+    };
+    pos.y < h && pos.x < w
+}
+
 fn get_tile<'a>(map: &Map<'a>, coord: CoOrd) -> Option<&'a TileType> {
     if map.contains_key(&coord.y) && map.get(&coord.y).unwrap().contains_key(&coord.x) {
         return Some(map.get(&coord.y).unwrap().get(&coord.x).unwrap());
@@ -17,7 +38,9 @@ fn put_tile<'a>(map: &mut Map<'a>, tile: &'a TileType, coord: CoOrd) {
     map.get_mut(&coord.y).unwrap().insert(coord.x, tile);
 }
 fn remove_tile(map: &mut Map, coord: CoOrd) {
-    map.get_mut(&coord.y).unwrap().remove(&coord.x);
+    if let Some(col) = map.get_mut(&coord.y) {
+        col.remove(&coord.x);
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -156,7 +179,7 @@ impl TileSystem {
         None
     }
     pub fn try_gen(&self, w: u32, h: u32) -> Option<Map> {
-        // start at the top left
+        // start at the bottom left
         let start = CoOrd { x: 0, y: 0 };
 
         // generate squares around that point.
@@ -195,7 +218,7 @@ impl TileSystem {
                     x: start.x - 1,
                     y: start.y,
                 },
-                RelativeDirection::RIGHT,
+                RelativeDirection::LEFT,
             ));
         }
         if start.y > 0 {
@@ -204,7 +227,7 @@ impl TileSystem {
                     x: start.x,
                     y: start.y - 1,
                 },
-                RelativeDirection::UP,
+                RelativeDirection::DOWN,
             ));
         }
         adjacent_coords.push((
@@ -212,14 +235,14 @@ impl TileSystem {
                 x: start.x + 1,
                 y: start.y,
             },
-            RelativeDirection::LEFT,
+            RelativeDirection::RIGHT,
         ));
         adjacent_coords.push((
             CoOrd {
                 x: start.x,
                 y: start.y + 1,
             },
-            RelativeDirection::DOWN,
+            RelativeDirection::UP,
         ));
 
         let mut adjacent_tiles: HashMap<RelativeDirection, &TileType> = HashMap::new();
@@ -229,31 +252,34 @@ impl TileSystem {
             }
         }
 
-        // TODO: Remove things that we can't have
         let mut current_is_required = false;
+        
         // if any adjacent tiles specify what must be here; that's what we need
         for (dir, tile) in &adjacent_tiles {
-            let applying_reqs = tile.must.iter().filter(|r| r.dir == *dir);
+            let applying_reqs = tile.must.iter().filter(|r| r.dir == dir.flip());
             if applying_reqs.clone().count() > 0 {
                 // this is targeted so must be a certain thing
                 // unless two require different things, in which case we can't solve it.
-                if current_is_required {
+                let req = applying_reqs.last().unwrap();
+                if current_is_required && req.tile != possibilities[0].name {
                     return false;
                 }
+                println!("required: {:?}", req);
                 current_is_required = true;
                 possibilities = vec![
-                    self.borrow_tile(applying_reqs.last().unwrap().tile.clone())
+                    self.borrow_tile(req.tile.clone())
                         .unwrap(),
                 ];
             }
         }
-        // we still don't have only one option; so narrow it down more.
         if !current_is_required {
+            // we still don't have only one option; so narrow it down more.
             possibilities.retain(|possibility| {
                 // if something that this tile needs to be there isn't, remove it.
                 for req in &possibility.must {
-                    if adjacent_tiles.contains_key(&req.dir.flip())
-                        && adjacent_tiles.get(&req.dir.flip()).unwrap().name != req.tile
+                    if (adjacent_tiles.contains_key(&req.dir)
+                        && adjacent_tiles.get(&req.dir).unwrap().name != req.tile) ||
+                        !trans_is_in_bounds(start, req.dir, w, h)
                     {
                         return false; // a requirement isn't satisfied; not possible.
                     }
@@ -261,8 +287,8 @@ impl TileSystem {
 
                 // if something that mustn't be there is there, remove it.
                 for req in &possibility.must_not {
-                    if adjacent_tiles.contains_key(&req.dir.flip())
-                        && adjacent_tiles.get(&req.dir.flip()).unwrap().name == req.tile
+                    if adjacent_tiles.contains_key(&req.dir)
+                        && adjacent_tiles.get(&req.dir).unwrap().name == req.tile
                     {
                         return false; // a requirement isn't satisfied; not possible.
                     }
@@ -271,7 +297,7 @@ impl TileSystem {
                 // if another tile type says we mustn't be this type, remove it.
                 for (dir, tile) in &adjacent_tiles {
                     for req in &tile.must_not {
-                        if req.dir == *dir && req.tile == possibility.name {
+                        if req.dir == dir.flip() && req.tile == possibility.name {
                             return false;
                         }
                     }
@@ -279,7 +305,6 @@ impl TileSystem {
                 true
             });
         }
-
         // if we have some options left, loop through them all
         for tile in possibilities {
             put_tile(map, tile, start);
@@ -292,8 +317,7 @@ impl TileSystem {
                 if !self.gen_adjacent_recursive(w, h, map, pos.clone(), start) {
                     any_failed = true;
                     break;
-                }
-            }
+                } }
             // if each one passes, this is a valid option & we're done.
             if !any_failed {
                 return true;
