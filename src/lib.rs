@@ -1,8 +1,35 @@
 /// A library for procedurally generating tilemaps
 use std::collections::HashMap;
 
+type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
+
+fn get_tile<'a>(map: &Map<'a>, coord: CoOrd) -> Option<&'a TileType> {
+    if map.contains_key(&coord.y) && map.get(&coord.y).unwrap().contains_key(&coord.x) {
+        return Some(map.get(&coord.y).unwrap().get(&coord.x).unwrap())
+    }
+    None
+}
+
+fn put_tile<'a>(map: &mut Map<'a>, tile: &'a TileType, coord: CoOrd) {
+    if !map.contains_key(&coord.y) {
+        map.insert(coord.y, HashMap::new());
+    }
+    map.get_mut(&coord.y).unwrap().insert(coord.x, tile);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CoOrd {
+    x: u32,
+    y: u32
+}
+#[derive(Debug)]
+struct RelativelyPositionedTile<'a> {
+    dir: RelativeDirection,
+    tile: &'a str 
+}
+
 /// Where a given tile must be/not be
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum RelativeDirection {
     UP,
     DOWN,
@@ -20,9 +47,9 @@ pub struct Requirement {
 /// A type of tile with certain restrictions placed on what it can be next to.
 #[derive(Debug, PartialEq)]
 pub struct TileType {
-    name: String,
-    must: Vec<Requirement>,
-    must_not: Vec<Requirement>,
+    pub name: String,
+    pub must: Vec<Requirement>,
+    pub must_not: Vec<Requirement>,
 }
 
 impl TileType {
@@ -110,8 +137,103 @@ impl TileSystem {
         self.tiles.get(&name.into())
     }
     /// Try to generate a map, retrying as many tries as given
-    pub fn gen_retry(&self, _w: u32, _h: u32, _tries: u32) -> Result<Vec<Vec<&TileType>>, ()> {
-        panic!("Not implemented")
+    pub fn gen_retry(&self, w: u32, h: u32, tries: u32) -> Option<Map> {
+        for i in 0..tries {
+            if let Some(map) = self.try_gen(w, h) {
+                return Some(map);
+            }
+        }
+        None
+    }
+    pub fn try_gen(&self, w: u32, h: u32) -> Option<Map> {
+        // start at the top left
+        let start = CoOrd {x: 0, y: 0};
+
+        // generate squares around that point.
+        let mut map: Map = HashMap::new(); 
+
+        if self.gen_adjacent_recursive(w, h, &mut map, start, start) {
+            return Some(map);
+        }
+        None
+    }
+
+    fn gen_adjacent_recursive<'a>(&'a self, w: u32, h: u32, map: &mut Map<'a>, start: CoOrd, prev: CoOrd) -> bool {
+        println!("{:?} {:?} {:?} {:?}", w, h, map, start);
+        if start.x > w || start.y > h {
+            return false;
+        }
+        if let Some(_) = get_tile(map, start) {
+            return false;
+        }
+
+        // start with all tiles as possibilities.
+        let mut possibilities: Vec<&TileType> = self.tiles.values().collect();
+
+        // populate the adjacent tiles we have to rule on.
+        let mut adjacent_coords: Vec<(CoOrd, RelativeDirection)> = Vec::new();
+        
+        if start.x > 0 {
+            adjacent_coords.push((CoOrd {x: start.x - 1, y: start.y}, RelativeDirection::RIGHT));
+        }
+        if start.y > 0 {
+            adjacent_coords.push((CoOrd {x: start.x, y: start.y - 1}, RelativeDirection::UP));
+        }
+        adjacent_coords.push((CoOrd {x: start.x + 1, y: start.y}, RelativeDirection::LEFT));
+        adjacent_coords.push((CoOrd {x: start.x, y: start.y + 1}, RelativeDirection::DOWN));
+        
+        let mut adjacent_tiles: Vec<RelativelyPositionedTile> = Vec::new();
+        for (coord, dir) in &adjacent_coords {
+            if let Some(tile) = get_tile(&map, *coord) { 
+                adjacent_tiles.push(RelativelyPositionedTile {dir: *dir, tile: &tile.name});
+            }
+        }
+       
+        let mut currently_set_is_requirement = false;
+        for tile in &adjacent_tiles {
+            // if any adjacent specify what this tile must be; that's the end of it.
+            for req in &self.borrow_tile(tile.tile).unwrap().must {
+                if req.dir == tile.dir {
+                    if currently_set_is_requirement && req.tile != possibilities[0].name {
+                        return false; // two adjacent tiles have different requirements; not possible
+                    }
+                    possibilities = vec!(self.borrow_tile(req.tile.clone()).unwrap());
+                    currently_set_is_requirement = true;
+                }
+            }
+        }
+        // otherwise, check if any specify what it must not be & eliminate those options
+        let possibilities: Vec<&TileType> = possibilities.into_iter().filter(|t|
+            adjacent_tiles.iter().filter(|x| 
+                self.borrow_tile(x.tile).unwrap().must_not.iter().filter(|r| r.dir == x.dir && r.tile == t.name).count() == 0
+            ).count() == 0 
+        ).collect();
+        
+        if possibilities.len() == 0 {
+            return false;
+        }
+        println!("{:?}", possibilities);
+        // if we have some options left, loop through them all
+        for tile in possibilities {
+            // and for each one generate each adjacent tile, unless we reach one that fails; in which case skip.
+            let mut any_failed = false;
+            for (pos,_) in &adjacent_coords {
+                if *pos == prev {
+                    break;
+                }
+                if !self.gen_adjacent_recursive(w, h, map, pos.clone(), start) {
+                    any_failed = true;
+                    break;
+                }
+            }
+            // if each one passes, this is a valid option & we're done.
+            if !any_failed {
+                put_tile(map, tile, start);
+                return true;
+            }
+        }
+        // if none pass, we couldn't find a valid option.
+        false
     }
 }
 
