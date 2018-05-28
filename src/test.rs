@@ -1,4 +1,30 @@
-use super::TileSystem;
+use super::{TileSystem, Map};
+use std::collections::HashMap;
+
+macro_rules! map(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::std::collections::HashMap::new();
+            $(
+                m.insert($key as u32, $value);
+            )+
+            m
+        }
+     };
+);
+
+/// Utility function; Compares a generated map with a map-like structure which specifies only names.
+fn compare_maps(actual: Map, expected: HashMap<u32, HashMap<u32, &str>>) -> bool {
+    for (y,v) in actual.iter() {
+        for (x,t) in v.iter() {
+            if t.name != *expected.get(y).unwrap().get(x).unwrap() {
+                println!("expected ({},{}): {}  - actual: {}", x, y, t.name, *expected.get(y).unwrap().get(x).unwrap());
+                return false;
+            }
+        }
+    }
+    true
+}
 
 #[test]
 fn adjacent_vertical() {
@@ -24,10 +50,13 @@ fn adjacent_vertical() {
     // 1 wide, 3 tall map
     let map = system.gen_retry(1, 3, 10).unwrap();
 
-    // returns Vec<Vec<&TileType>> where the outer is Y
-    assert_eq!(map[0][0].name, "floor");
-    assert_eq!(map[1][0].name, "ground");
-    assert_eq!(map[2][0].name, "roof");
+    let expected = map!{
+        0 => map!{0 => "floor"},
+        1 => map!{0 => "ground"},
+        2 => map!{0 => "roof"}
+    };
+
+    assert_eq!(compare_maps(map, expected), true);
 }
 
 #[test]
@@ -50,11 +79,13 @@ fn not_adjacent_vertical() {
     // 1 wide, 3 tall map
     let map = system.gen_retry(1, 3, 10).unwrap();
 
-    // returns Vec<Vec<&TileType>> where the outer is Y
+    let expected = map!{
+        0 => map!{0 => "red"},
+        1 => map!{0 => "green"},
+        2 => map!{0 => "blue"}
+    };
 
-    assert_eq!(map[0][0].name, "red");
-    assert_eq!(map[1][0].name, "green");
-    assert_eq!(map[2][0].name, "blue");
+    assert_eq!(compare_maps(map, expected), true);
 }
 
 #[test]
@@ -79,11 +110,12 @@ fn adjacent_horizontal() {
     // 3 wide, 1 tall
     let map = system.gen_retry(3, 1, 10).unwrap();
 
-    // returns Vec<Vec<&TileType>> where the outer is Y
-
-    assert_eq!(map[0][0].name, "left");
-    assert_eq!(map[0][1].name, "middle");
-    assert_eq!(map[0][2].name, "right");
+    let expected = map!{
+        0 => map!{0 => "left"},
+        0 => map!{1 => "middle"},
+        0 => map!{2 => "right"}
+    };
+    assert_eq!(compare_maps(map, expected), true);
 }
 
 #[test]
@@ -112,9 +144,10 @@ fn not_adjacent_horizontal() {
     // 3 wide, 1 tall map
     let map = system.gen_retry(3, 1, 10).unwrap();
 
-    // returns Vec<Vec<&TileType>> where the outer is Y
-
-    assert_eq!(map[0][0].name, "red");
-    assert_eq!(map[0][1].name, "green");
-    assert_eq!(map[0][2].name, "blue");
+    let expected = map!{
+        0 => map!{0 => "red"},
+        0 => map!{1 => "green"},
+        0 => map!{2 => "blue"}
+};
+    assert_eq!(compare_maps(map, expected), true);
 }

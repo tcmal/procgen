@@ -175,7 +175,6 @@ impl TileSystem {
         if let Some(_) = get_tile(map, start) {
             return true;
         }
-        println!("now generating: {:?}, {:?}", start.x, start.y);
 
         // start with all tiles as possibilities.
         let mut possibilities: Vec<&TileType> = self.tiles.values().collect();
@@ -198,7 +197,6 @@ impl TileSystem {
                 adjacent_tiles.insert(*dir, tile);
             }
         }
-        println!("{:?}", adjacent_tiles);
        
         // TODO: Remove things that we can't have
         let mut current_is_required = false;
@@ -253,7 +251,6 @@ impl TileSystem {
                 if *pos == prev {
                     continue;
                 }
-                println!("trying to generate: {} {}", pos.x, pos.y);
                 if !self.gen_adjacent_recursive(w, h, map, pos.clone(), start) {
                     any_failed = true;
                     break;
