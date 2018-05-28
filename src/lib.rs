@@ -5,7 +5,7 @@ type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
 
 fn get_tile<'a>(map: &Map<'a>, coord: CoOrd) -> Option<&'a TileType> {
     if map.contains_key(&coord.y) && map.get(&coord.y).unwrap().contains_key(&coord.x) {
-        return Some(map.get(&coord.y).unwrap().get(&coord.x).unwrap())
+        return Some(map.get(&coord.y).unwrap().get(&coord.x).unwrap());
     }
     None
 }
@@ -23,7 +23,7 @@ fn remove_tile(map: &mut Map, coord: CoOrd) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CoOrd {
     x: u32,
-    y: u32
+    y: u32,
 }
 
 /// Where a given tile must be/not be
@@ -42,7 +42,7 @@ impl RelativeDirection {
             UP => DOWN,
             DOWN => UP,
             LEFT => RIGHT,
-            RIGHT => LEFT
+            RIGHT => LEFT,
         }
     }
 }
@@ -157,10 +157,10 @@ impl TileSystem {
     }
     pub fn try_gen(&self, w: u32, h: u32) -> Option<Map> {
         // start at the top left
-        let start = CoOrd {x: 0, y: 0};
+        let start = CoOrd { x: 0, y: 0 };
 
         // generate squares around that point.
-        let mut map: Map = HashMap::new(); 
+        let mut map: Map = HashMap::new();
 
         if self.gen_adjacent_recursive(w, h, &mut map, start, start) {
             return Some(map);
@@ -168,7 +168,14 @@ impl TileSystem {
         None
     }
 
-    fn gen_adjacent_recursive<'a>(&'a self, w: u32, h: u32, map: &mut Map<'a>, start: CoOrd, prev: CoOrd) -> bool {
+    fn gen_adjacent_recursive<'a>(
+        &'a self,
+        w: u32,
+        h: u32,
+        map: &mut Map<'a>,
+        start: CoOrd,
+        prev: CoOrd,
+    ) -> bool {
         if start.x >= w || start.y >= h {
             return true;
         }
@@ -181,23 +188,47 @@ impl TileSystem {
 
         // populate the adjacent tiles we have to rule on.
         let mut adjacent_coords: Vec<(CoOrd, RelativeDirection)> = Vec::new();
-        
+
         if start.x > 0 {
-            adjacent_coords.push((CoOrd {x: start.x - 1, y: start.y}, RelativeDirection::RIGHT));
+            adjacent_coords.push((
+                CoOrd {
+                    x: start.x - 1,
+                    y: start.y,
+                },
+                RelativeDirection::RIGHT,
+            ));
         }
         if start.y > 0 {
-            adjacent_coords.push((CoOrd {x: start.x, y: start.y - 1}, RelativeDirection::UP));
+            adjacent_coords.push((
+                CoOrd {
+                    x: start.x,
+                    y: start.y - 1,
+                },
+                RelativeDirection::UP,
+            ));
         }
-        adjacent_coords.push((CoOrd {x: start.x + 1, y: start.y}, RelativeDirection::LEFT));
-        adjacent_coords.push((CoOrd {x: start.x, y: start.y + 1}, RelativeDirection::DOWN));
-        
+        adjacent_coords.push((
+            CoOrd {
+                x: start.x + 1,
+                y: start.y,
+            },
+            RelativeDirection::LEFT,
+        ));
+        adjacent_coords.push((
+            CoOrd {
+                x: start.x,
+                y: start.y + 1,
+            },
+            RelativeDirection::DOWN,
+        ));
+
         let mut adjacent_tiles: HashMap<RelativeDirection, &TileType> = HashMap::new();
         for (coord, dir) in &adjacent_coords {
-            if let Some(tile) = get_tile(&map, *coord) { 
+            if let Some(tile) = get_tile(&map, *coord) {
                 adjacent_tiles.insert(*dir, tile);
             }
         }
-       
+
         // TODO: Remove things that we can't have
         let mut current_is_required = false;
         // if any adjacent tiles specify what must be here; that's what we need
@@ -210,22 +241,29 @@ impl TileSystem {
                     return false;
                 }
                 current_is_required = true;
-                possibilities = vec!(self.borrow_tile(applying_reqs.last().unwrap().tile.clone()).unwrap());
+                possibilities = vec![
+                    self.borrow_tile(applying_reqs.last().unwrap().tile.clone())
+                        .unwrap(),
+                ];
             }
         }
-        // we still don't have only one option; so narrow it down more. 
+        // we still don't have only one option; so narrow it down more.
         if !current_is_required {
-            possibilities.retain(|possibility| { 
+            possibilities.retain(|possibility| {
                 // if something that this tile needs to be there isn't, remove it.
                 for req in &possibility.must {
-                    if adjacent_tiles.contains_key(&req.dir.flip()) && adjacent_tiles.get(&req.dir.flip()).unwrap().name != req.tile {
+                    if adjacent_tiles.contains_key(&req.dir.flip())
+                        && adjacent_tiles.get(&req.dir.flip()).unwrap().name != req.tile
+                    {
                         return false; // a requirement isn't satisfied; not possible.
                     }
                 }
 
                 // if something that mustn't be there is there, remove it.
                 for req in &possibility.must_not {
-                    if adjacent_tiles.contains_key(&req.dir.flip()) && adjacent_tiles.get(&req.dir.flip()).unwrap().name == req.tile {
+                    if adjacent_tiles.contains_key(&req.dir.flip())
+                        && adjacent_tiles.get(&req.dir.flip()).unwrap().name == req.tile
+                    {
                         return false; // a requirement isn't satisfied; not possible.
                     }
                 }
@@ -247,7 +285,7 @@ impl TileSystem {
             put_tile(map, tile, start);
             // and for each one generate each adjacent tile, unless we reach one that fails; in which case skip.
             let mut any_failed = false;
-            for (pos,_) in &adjacent_coords {
+            for (pos, _) in &adjacent_coords {
                 if *pos == prev {
                     continue;
                 }

@@ -1,4 +1,4 @@
-use super::{TileSystem, Map};
+use super::{Map, TileSystem};
 use std::collections::HashMap;
 
 macro_rules! map(
@@ -15,10 +15,16 @@ macro_rules! map(
 
 /// Utility function; Compares a generated map with a map-like structure which specifies only names.
 fn compare_maps(actual: Map, expected: HashMap<u32, HashMap<u32, &str>>) -> bool {
-    for (y,v) in actual.iter() {
-        for (x,t) in v.iter() {
+    for (y, v) in actual.iter() {
+        for (x, t) in v.iter() {
             if t.name != *expected.get(y).unwrap().get(x).unwrap() {
-                println!("expected ({},{}): {}  - actual: {}", x, y, t.name, *expected.get(y).unwrap().get(x).unwrap());
+                println!(
+                    "expected ({},{}): {}  - actual: {}",
+                    x,
+                    y,
+                    t.name,
+                    *expected.get(y).unwrap().get(x).unwrap()
+                );
                 return false;
             }
         }
@@ -145,9 +151,9 @@ fn not_adjacent_horizontal() {
     let map = system.gen_retry(3, 1, 10).unwrap();
 
     let expected = map!{
-        0 => map!{0 => "red"},
-        0 => map!{1 => "green"},
-        0 => map!{2 => "blue"}
-};
+            0 => map!{0 => "red"},
+            0 => map!{1 => "green"},
+            0 => map!{2 => "blue"}
+    };
     assert_eq!(compare_maps(map, expected), true);
 }
