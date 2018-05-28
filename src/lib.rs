@@ -35,6 +35,18 @@ pub enum RelativeDirection {
     RIGHT,
 }
 
+impl RelativeDirection {
+    pub fn flip(&self) -> RelativeDirection {
+        use self::RelativeDirection::*;
+        match self {
+            UP => DOWN,
+            DOWN => UP,
+            LEFT => RIGHT,
+            RIGHT => LEFT
+        }
+    }
+}
+
 /// A requirement for a tile type
 #[derive(Debug, PartialEq, Eq)]
 pub struct Requirement {
@@ -189,6 +201,48 @@ impl TileSystem {
         println!("{:?}", adjacent_tiles);
        
         // TODO: Remove things that we can't have
+        let mut current_is_required = false;
+        // if any adjacent tiles specify what must be here; that's what we need
+        for (dir, tile) in &adjacent_tiles {
+            let applying_reqs = tile.must.iter().filter(|r| r.dir == *dir);
+            if applying_reqs.clone().count() > 0 {
+                // this is targeted so must be a certain thing
+                // unless two require different things, in which case we can't solve it.
+                if current_is_required {
+                    return false;
+                }
+                current_is_required = true;
+                possibilities = vec!(self.borrow_tile(applying_reqs.last().unwrap().tile.clone()).unwrap());
+            }
+        }
+        // we still don't have only one option; so narrow it down more. 
+        if !current_is_required {
+            possibilities.retain(|possibility| { 
+                // if something that this tile needs to be there isn't, remove it.
+                for req in &possibility.must {
+                    if adjacent_tiles.contains_key(&req.dir.flip()) && adjacent_tiles.get(&req.dir.flip()).unwrap().name != req.tile {
+                        return false; // a requirement isn't satisfied; not possible.
+                    }
+                }
+
+                // if something that mustn't be there is there, remove it.
+                for req in &possibility.must_not {
+                    if adjacent_tiles.contains_key(&req.dir.flip()) && adjacent_tiles.get(&req.dir.flip()).unwrap().name == req.tile {
+                        return false; // a requirement isn't satisfied; not possible.
+                    }
+                }
+
+                // if another tile type says we mustn't be this type, remove it.
+                for (dir, tile) in &adjacent_tiles {
+                    for req in &tile.must_not {
+                        if req.dir == *dir && req.tile == possibility.name {
+                            return false;
+                        }
+                    }
+                }
+                true
+            });
+        }
 
         // if we have some options left, loop through them all
         for tile in possibilities {
