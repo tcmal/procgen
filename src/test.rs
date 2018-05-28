@@ -17,8 +17,8 @@ macro_rules! map(
 
 fn print_hash(prefix: &str, map: HashMap<u32, HashMap<u32, &str>>) {
     println!("{}", prefix);
-    for (y,v) in map {
-        for (x,t) in v {
+    for (y, v) in map {
+        for (x, t) in v {
             println!("({}, {}) - {}", x, y, t);
         }
     }
@@ -26,8 +26,8 @@ fn print_hash(prefix: &str, map: HashMap<u32, HashMap<u32, &str>>) {
 
 fn print_map(prefix: &str, map: Map) {
     println!("{}", prefix);
-    for (y,v) in map {
-        for (x,t) in v {
+    for (y, v) in map {
+        for (x, t) in v {
             println!("({}, {}) - {}", x, y, t.name);
         }
     }
@@ -51,8 +51,7 @@ fn compare_maps(actual: Map, expected: HashMap<u32, HashMap<u32, &str>>) -> bool
 fn adjacent_vertical() {
     let mut system = TileSystem::new();
     {
-        system.add_tile("ground").unwrap()
-            .below("floor");
+        system.add_tile("ground").unwrap().below("floor");
     }
     {
         system
@@ -62,8 +61,7 @@ fn adjacent_vertical() {
             .above("ground");
     }
     {
-        system.add_tile("roof").unwrap()
-            .above("floor");
+        system.add_tile("roof").unwrap().above("floor");
     }
 
     // must be: roof    /\
@@ -86,17 +84,23 @@ fn adjacent_vertical() {
 fn not_adjacent_vertical() {
     let mut system = TileSystem::new();
     {
-        system.add_tile("red").unwrap()
+        system
+            .add_tile("red")
+            .unwrap()
             .not_above("red")
             .not_above("green");
     }
     {
-        system.add_tile("green").unwrap()
+        system
+            .add_tile("green")
+            .unwrap()
             .not_above("blue")
             .not_above("green");
     }
     {
-        system.add_tile("blue").unwrap()
+        system
+            .add_tile("blue")
+            .unwrap()
             .not_above("blue")
             .not_above("red")
             .not_below("red");
@@ -160,7 +164,9 @@ fn not_adjacent_horizontal() {
             .not_right("blue");
     }
     {
-        system.add_tile("green").unwrap()
+        system
+            .add_tile("green")
+            .unwrap()
             .not_right("blue")
             .not_right("green");
     }

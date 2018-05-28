@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
 
-fn trans_is_in_bounds(mut pos: CoOrd, dir: RelativeDirection, w: u32, h: u32) -> bool{
+fn trans_is_in_bounds(mut pos: CoOrd, dir: RelativeDirection, w: u32, h: u32) -> bool {
     use self::RelativeDirection::*;
     match dir {
         UP => pos.y += 1,
@@ -13,13 +13,13 @@ fn trans_is_in_bounds(mut pos: CoOrd, dir: RelativeDirection, w: u32, h: u32) ->
                 return false;
             }
             pos.y -= 1
-        },
+        }
         LEFT => {
             if pos.x < 1 {
                 return false;
             }
             pos.x -= 1
-        },
+        }
     };
     pos.y < h && pos.x < w
 }
@@ -253,7 +253,7 @@ impl TileSystem {
         }
 
         let mut current_is_required = false;
-        
+
         // if any adjacent tiles specify what must be here; that's what we need
         for (dir, tile) in &adjacent_tiles {
             let applying_reqs = tile.must.iter().filter(|r| r.dir == dir.flip());
@@ -266,10 +266,7 @@ impl TileSystem {
                 }
                 println!("required: {:?}", req);
                 current_is_required = true;
-                possibilities = vec![
-                    self.borrow_tile(req.tile.clone())
-                        .unwrap(),
-                ];
+                possibilities = vec![self.borrow_tile(req.tile.clone()).unwrap()];
             }
         }
         if !current_is_required {
@@ -278,8 +275,8 @@ impl TileSystem {
                 // if something that this tile needs to be there isn't, remove it.
                 for req in &possibility.must {
                     if (adjacent_tiles.contains_key(&req.dir)
-                        && adjacent_tiles.get(&req.dir).unwrap().name != req.tile) ||
-                        !trans_is_in_bounds(start, req.dir, w, h)
+                        && adjacent_tiles.get(&req.dir).unwrap().name != req.tile)
+                        || !trans_is_in_bounds(start, req.dir, w, h)
                     {
                         return false; // a requirement isn't satisfied; not possible.
                     }
@@ -317,7 +314,8 @@ impl TileSystem {
                 if !self.gen_adjacent_recursive(w, h, map, pos.clone(), start) {
                     any_failed = true;
                     break;
-                } }
+                }
+            }
             // if each one passes, this is a valid option & we're done.
             if !any_failed {
                 return true;
