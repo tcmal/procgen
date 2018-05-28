@@ -69,7 +69,7 @@ fn adjacent_vertical() {
     //          ground  --
 
     // 1 wide, 3 tall map
-    let map = system.gen_retry(1, 3, 10).unwrap();
+    let map = system.try_gen(1, 3).unwrap();
 
     let expected = map!{
         2 => map!{0 => "roof"},
@@ -111,7 +111,7 @@ fn not_adjacent_vertical() {
     //          red
 
     // 1 wide, 3 tall map
-    let map = system.gen_retry(1, 3, 99999).unwrap();
+    let map = system.try_gen(1, 3).unwrap();
 
     let expected = map!{
         0 => map!{0 => "red"},
@@ -142,7 +142,7 @@ fn adjacent_horizontal() {
     // must be: left middle right
 
     // 3 wide, 1 tall
-    let map = system.gen_retry(3, 1, 10).unwrap();
+    let map = system.try_gen(3, 1).unwrap();
 
     let expected = map!{
         0 => map!{0 => "left",
@@ -182,7 +182,7 @@ fn not_adjacent_horizontal() {
     // must be: red green blue
 
     // 3 wide, 1 tall map
-    let map = system.gen_retry(3, 1, 10).unwrap();
+    let map = system.try_gen(3, 1).unwrap();
 
     let expected = map!{
             0 => map!{0 => "red",
