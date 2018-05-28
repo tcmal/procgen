@@ -1,7 +1,7 @@
 /// A library for procedurally generating tilemaps
 use std::collections::HashMap;
 
-type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
+pub type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
 
 fn trans_is_in_bounds(mut pos: CoOrd, dir: RelativeDirection, w: u32, h: u32) -> bool {
     use self::RelativeDirection::*;
@@ -49,7 +49,7 @@ struct CoOrd {
     y: u32,
 }
 
-/// Where a given tile must be/not be
+/// Where a given tile must be/not be relative to the tile.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum RelativeDirection {
     UP,
@@ -59,6 +59,7 @@ pub enum RelativeDirection {
 }
 
 impl RelativeDirection {
+    /// Flips the direction
     pub fn flip(&self) -> RelativeDirection {
         use self::RelativeDirection::*;
         match self {
@@ -110,35 +111,35 @@ impl TileType {
         });
         self
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. This means the given tile must be below this one.
     pub fn above<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must(RelativeDirection::DOWN, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must be above this one.
     pub fn below<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must(RelativeDirection::UP, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must be to the right of this one.
     pub fn left<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must(RelativeDirection::RIGHT, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must be to the left of this one.
     pub fn right<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must(RelativeDirection::LEFT, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must not be below this one.
     pub fn not_above<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must_not(RelativeDirection::DOWN, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must not be above this one.
     pub fn not_below<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must_not(RelativeDirection::UP, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must not be to the right of this one.
     pub fn not_left<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must_not(RelativeDirection::RIGHT, tile)
     }
-    // Convenience function, obvious.
+    // Convenience function, obvious. Given tile must not be to the left of this one.
     pub fn not_right<S: Into<String>>(&mut self, tile: S) -> &mut Self {
         self.add_must_not(RelativeDirection::LEFT, tile)
     }
@@ -169,15 +170,9 @@ impl TileSystem {
     pub fn borrow_tile<S: Into<String>>(&self, name: S) -> Option<&TileType> {
         self.tiles.get(&name.into())
     }
-    /// Try to generate a map, retrying as many tries as given
-    pub fn gen_retry(&self, w: u32, h: u32, tries: u32) -> Option<Map> {
-        for _ in 0..tries {
-            if let Some(map) = self.try_gen(w, h) {
-                return Some(map);
-            }
-        }
-        None
-    }
+    /// Try to generate a map with the current set of tiles.
+    /// Guarantees all restraints between tiles are satisfied however doesn't currently guarantee every tile will be present (TODO)
+    /// Panics if any relationships between tiles are invalid.
     pub fn try_gen(&self, w: u32, h: u32) -> Option<Map> {
         // start at the bottom left
         let start = CoOrd { x: 0, y: 0 };
