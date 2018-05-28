@@ -19,11 +19,9 @@ fn compare_maps(actual: Map, expected: HashMap<u32, HashMap<u32, &str>>) -> bool
         for (x, t) in v.iter() {
             if t.name != *expected.get(y).unwrap().get(x).unwrap() {
                 println!(
-                    "expected ({},{}): {}  - actual: {}",
-                    x,
-                    y,
-                    t.name,
-                    *expected.get(y).unwrap().get(x).unwrap()
+                    "expected: {:?}\nactual: {:?}",
+                    expected,
+                    actual,
                 );
                 return false;
             }
