@@ -3,17 +3,22 @@ use lib::TileSystem;
 fn main() {
     let mut system = TileSystem::new();
     {
-        system.add_tile("ground").unwrap();
+        system.add_tile("ground").unwrap()
+            .not_above("ground")
+            .below("floor");
     }
     {
         system
             .add_tile("floor")
             .unwrap()
             .above("ground")
+            .not_below("floor")
             .below("roof");
     }
     {
-        system.add_tile("roof").unwrap().above("floor");
+        system.add_tile("roof").unwrap()
+            .above("floor")
+            .not_below("roof");
     }
 
     // must be: roof    /\

@@ -22,11 +22,6 @@ struct CoOrd {
     x: u32,
     y: u32
 }
-#[derive(Debug)]
-struct RelativelyPositionedTile<'a> {
-    dir: RelativeDirection,
-    tile: &'a str 
-}
 
 /// Where a given tile must be/not be
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -138,7 +133,7 @@ impl TileSystem {
     }
     /// Try to generate a map, retrying as many tries as given
     pub fn gen_retry(&self, w: u32, h: u32, tries: u32) -> Option<Map> {
-        for i in 0..tries {
+        for _ in 0..tries {
             if let Some(map) = self.try_gen(w, h) {
                 return Some(map);
             }
@@ -159,13 +154,13 @@ impl TileSystem {
     }
 
     fn gen_adjacent_recursive<'a>(&'a self, w: u32, h: u32, map: &mut Map<'a>, start: CoOrd, prev: CoOrd) -> bool {
-        println!("{:?} {:?} {:?} {:?}", w, h, map, start);
-        if start.x > w || start.y > h {
-            return false;
+        if start.x >= w || start.y >= h {
+            return true;
         }
         if let Some(_) = get_tile(map, start) {
-            return false;
+            return true;
         }
+        println!("now generating: {:?}, {:?}", start.x, start.y);
 
         // start with all tiles as possibilities.
         let mut possibilities: Vec<&TileType> = self.tiles.values().collect();
@@ -182,45 +177,26 @@ impl TileSystem {
         adjacent_coords.push((CoOrd {x: start.x + 1, y: start.y}, RelativeDirection::LEFT));
         adjacent_coords.push((CoOrd {x: start.x, y: start.y + 1}, RelativeDirection::DOWN));
         
-        let mut adjacent_tiles: Vec<RelativelyPositionedTile> = Vec::new();
+        let mut adjacent_tiles: HashMap<RelativeDirection, &TileType> = HashMap::new();
         for (coord, dir) in &adjacent_coords {
             if let Some(tile) = get_tile(&map, *coord) { 
-                adjacent_tiles.push(RelativelyPositionedTile {dir: *dir, tile: &tile.name});
+                adjacent_tiles.insert(*dir, tile);
             }
         }
+        println!("{:?}", adjacent_tiles);
        
-        let mut currently_set_is_requirement = false;
-        for tile in &adjacent_tiles {
-            // if any adjacent specify what this tile must be; that's the end of it.
-            for req in &self.borrow_tile(tile.tile).unwrap().must {
-                if req.dir == tile.dir {
-                    if currently_set_is_requirement && req.tile != possibilities[0].name {
-                        return false; // two adjacent tiles have different requirements; not possible
-                    }
-                    possibilities = vec!(self.borrow_tile(req.tile.clone()).unwrap());
-                    currently_set_is_requirement = true;
-                }
-            }
-        }
-        // otherwise, check if any specify what it must not be & eliminate those options
-        let possibilities: Vec<&TileType> = possibilities.into_iter().filter(|t|
-            adjacent_tiles.iter().filter(|x| 
-                self.borrow_tile(x.tile).unwrap().must_not.iter().filter(|r| r.dir == x.dir && r.tile == t.name).count() == 0
-            ).count() == 0 
-        ).collect();
-        
-        if possibilities.len() == 0 {
-            return false;
-        }
-        println!("{:?}", possibilities);
+        // TODO: Remove things that we can't have
+
         // if we have some options left, loop through them all
         for tile in possibilities {
+            put_tile(map, tile, start);
             // and for each one generate each adjacent tile, unless we reach one that fails; in which case skip.
             let mut any_failed = false;
             for (pos,_) in &adjacent_coords {
                 if *pos == prev {
-                    break;
+                    continue;
                 }
+                println!("trying to generate: {} {}", pos.x, pos.y);
                 if !self.gen_adjacent_recursive(w, h, map, pos.clone(), start) {
                     any_failed = true;
                     break;
@@ -228,7 +204,6 @@ impl TileSystem {
             }
             // if each one passes, this is a valid option & we're done.
             if !any_failed {
-                put_tile(map, tile, start);
                 return true;
             }
         }
