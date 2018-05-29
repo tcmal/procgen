@@ -4,7 +4,7 @@
 
 Procedural generation library based on tiles w/ restrictions placed by the user.
 
-# TODO
+# Todos 
 
   - Make sure at least one of every tile is in the end map.
   - Optimisation
