@@ -1,4 +1,9 @@
 /// A library for procedurally generating tilemaps
+
+extern crate rand;
+
+use rand::Rng;
+
 use std::collections::HashMap;
 
 pub type Map<'a> = HashMap<u32, HashMap<u32, &'a TileType>>;
@@ -259,7 +264,6 @@ impl TileSystem {
                 if current_is_required && req.tile != possibilities[0].name {
                     return false;
                 }
-                println!("required: {:?}", req);
                 current_is_required = true;
                 possibilities = vec![self.borrow_tile(req.tile.clone()).unwrap()];
             }
@@ -297,7 +301,13 @@ impl TileSystem {
                 true
             });
         }
-        // if we have some options left, loop through them all
+        // if we have some options left, randomise them & loop through them all
+        if possibilities.len() < 1 {
+            return false;
+        }
+        
+        rand::thread_rng().shuffle(possibilities.as_mut_slice());
+    
         for tile in possibilities {
             put_tile(map, tile, start);
             // and for each one generate each adjacent tile, unless we reach one that fails; in which case skip.
